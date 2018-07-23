@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.epro.kq.mappers.ApproveMapper">
+    <!--<cache readOnly="true"></cache>-->
+    <resultMap id="approveResultMap" type="com.epro.kq.domain.Apply">
+        <id property="uuid" column="uuid"/>
+        <result property="empId" column="empid"/>
+        <result property="startDate" column="startdate"/>
+        <result property="startTime" column="starttime"/>
+        <result property="endDate" column="endDate"/>
+        <result property="endTime" column="endtime"/>
+        <result property="reason" column="reason"/>
+        <result property="applyType" column="applytype"/>
+        <result property="state" column="state"/>
+        <result property="approveRemark" column="approveremark"/>
+        <result property="approverId" column="approverId"/>
+        <result property="approveTime" column="approvetime"/>
+        <result property="createTime" column="createtime"/>
+        <result property="updateTime" column="updatetime"/>
+    </resultMap>
+
+    <resultMap id="empApplyMap" type="com.epro.kq.interaction.approve.ApproveListResponse">
+        <result property="empName" column="empname"/>
+        <result property="empId" column="empid"/>
+        <result property="applyId" column="uuid"/>
+        <result property="startDate" column="startdate"/>
+        <result property="startTime" column="starttime"/>
+        <result property="endDate" column="endDate"/>
+        <result property="endTime" column="endtime"/>
+        <result property="reason" column="reason"/>
+        <result property="applyType" column="applytype"/>
+        <result property="state" column="state"/>
+        <result property="approveRemark" column="approveremark"/>
+        <result property="approverId" column="approverId"/>
+        <result property="approverName" column="approvername"/>
+        <result property="approveTime" column="approvetime"/>
+        <result property="createTime" column="createtime"/>
+        <result property="updateTime" column="updatetime"/>
+    </resultMap>
+
+
+    <!-- 分页查询待批数据 -->
+    <select id="getUnapprovedList" resultMap="empApplyMap">
+        SELECT
+            emp.empname empName,
+            apply.empid empId,
+            apply.uuid applyId,
+            apply.startdate startDate,
+            apply.starttime startTime,
+            apply.enddate endDate,
+            apply.endtime endTime,
+            apply.reason,
+            apply.applytype applyType,
+            apply.state,
+            apply.approverid approverId,
+            apply.approveremark approveRemark,
+            apply.approvetime approveTime,
+            apply.createtime createTime,
+            apply.updatetime createTime
+        FROM
+            employee emp,
+            applybill apply
+        WHERE
+            apply.state in('0', '3')
+        AND approverid = #{approverId}
+    <if test="applyType != 'All'">
+        AND apply.applytype = #{applyType}
+    </if>
+    <if test="keyWord != '%null%'">
+        AND (emp.empname LIKE #{keyWord}
+        OR apply.startDate LIKE #{keyWord}
+        OR apply.endDate LIKE  #{keyWord})
+    </if>
+        AND
+            apply.empid = emp.uuid
+        ORDER BY
+            apply.startdate ${sort}
+        LIMIT ${limitStart1},${pageSize}
+    </select>
+
+    <!-- 分页查询已批数据 -->
+    <select id="getApprovedList" resultMap="empApplyMap">
+        SELECT
+            emp.empname empName,
+            apply.empid empId,
+            apply.uuid applyId,
+            apply.startdate startDate,
+            apply.starttime startTime,
+            apply.enddate endDate,
+            apply.endtime endTime,
+            apply.reason,
+            apply.applytype applyType,
+            apply.state,
+            apply.approverid approverId,
+            approver.empname approverName,
+            apply.approveremark approveRemark,
+            apply.approvetime approveTime,
+            apply.createtime createTime,
+            apply.updatetime updateTime
+        FROM
+            employee emp,
+            applybill apply,
+            employee approver
+        WHERE
+        apply.state in ('1', '2')
+        AND approverid = #{approverId}
+    <if test="applyType != 'All'">
+        AND apply.applytype = #{applyType}
+    </if>
+    <if test="keyWord != '%null%'">
+        AND (emp.empname LIKE #{keyWord}
+        OR apply.startDate LIKE #{keyWord}
+        OR apply.endDate LIKE  #{keyWord})
+    </if>
+        AND
+            apply.empid = emp.uuid
+        AND
+            approver.uuid = apply.approverid
+        ORDER BY
+            apply.startdate ${sort}
+        LIMIT ${limitStart2},${pageSize};
+    </select>
+
+
+
+
+    <!-- 待批总数目 -->
+    <select id="getUnapprovedCount" resultType="int">
+        SELECT COUNT(*)
+        FROM applybill apply, employee emp
+        WHERE state in ('0', '3')
+        AND approverid = #{approverId}
+        AND
+        apply.empid = emp.uuid
+    <if test="applyType != 'All'">
+        AND apply.applytype = #{applyType}
+    </if>
+    <if test="keyWord != '%null%'">
+        AND (emp.empname LIKE #{keyWord}
+        OR apply.startDate LIKE #{keyWord}
+        OR apply.endDate LIKE  #{keyWord})
+    </if>
+    </select>
+
+    <!-- 已批总数目 -->
+    <select id="getApprovedCount" resultType="int">
+        SELECT COUNT(*)
+        FROM applybill apply, employee emp
+        WHERE state in ('1', '2')
+        AND approverid = #{approverId}
+        AND
+        apply.empid = emp.uuid
+    <if test="applyType != 'All'">
+        AND apply.applytype = #{applyType}
+    </if>
+    <if test="keyWord != '%null%'">
+        AND (emp.empname LIKE #{keyWord}
+        OR apply.startDate LIKE #{keyWord}
+        OR apply.endDate LIKE  #{keyWord})
+    </if>
+    </select>
+
+    <!-- 通过applyId查询申请单 -->
+    <select id="getApplyById" resultMap="approveResultMap" parameterType="String">
+        SELECT * FROM applybill WHERE uuid = #{applyId};
+    </select>
+
+    <!-- (审批)更新申请单 -->
+    <update id="approve" parameterType="Map">
+        UPDATE applybill set state = #{flag},approverid = #{approverId},
+         approveremark = #{approveRemark},approvetime=#{approveTime},updatetime = now() WHERE uuid = #{applyId};
+    </update>
+
+    <!-- 获取审批单(申请单)详情(待批,无approverid) -->
+    <select id="getUnapprovedDetailById" parameterType="String" resultMap="empApplyMap">
+        SELECT
+            emp.empname empName,
+            apply.empid empId,
+            apply.uuid applyId,
+            apply.startdate startDate,
+            apply.starttime startTime,
+            apply.enddate endDate,
+            apply.endtime endTime,
+            apply.reason,
+            apply.applytype applyType,
+            apply.state,
+            apply.approverid approverId,
+            apply.approveremark approveRemark,
+            apply.approvetime approveTime,
+            apply.createtime createTime,
+            apply.updatetime createTime
+        FROM
+            employee emp,
+            applybill apply
+        WHERE
+            apply.uuid = #{applyId}
+        AND
+            apply.empid = emp.uuid
+    </select>
+
+    <!-- 获取审批单(申请单)详情(已批,有approverid) -->
+    <select id="getApprovedDetailById" parameterType="String" resultMap="empApplyMap">
+        SELECT
+            emp.empname empName,
+            apply.empid empId,
+            apply.uuid applyId,
+            apply.startdate startDate,
+            apply.starttime startTime,
+            apply.enddate endDate,
+            apply.endtime endTime,
+            apply.reason,
+            apply.applytype applyType,
+            apply.state,
+            apply.approverid approverId,
+            approver.empName approverName,
+            apply.approveremark approveRemark,
+            apply.approvetime approveTime,
+            apply.createtime createTime,
+            apply.updatetime createTime
+        FROM
+            employee emp,
+            applybill apply,
+            employee approver
+        WHERE
+            apply.uuid = #{applyId}
+        AND
+            apply.empid = emp.uuid
+        AND approver.uuid = apply.approverid
+    </select>
+
+    <!-- 记录1级审批流程 -->
+    <insert id="firstLevelApprove" parameterType="Map">
+        INSERT INTO approveprocess (uuid, applyid, approverid1,
+         approvetime1, result1, approveremark1, createtime, updatetime)
+        VALUES (uuid(), #{applyId}, #{approverId1}, #{approveTime1},
+         #{result1}, #{approveRemark1}, now(), now())
+    </insert>
+
+    <!-- 记录2级审批流程 -->
+    <update id="secondLevelApprove" parameterType="Map">
+        UPDATE approveprocess SET approverid2 = #{approverId2},
+        approvetime2 = #{approveTime2}, result2 = #{result2},
+        approveremark2 = #{approveRemark2}, updatetime = now()
+        WHERE applyid = #{applyId}
+    </update>
+
+    <select id="getProcessInfoByApplyId" parameterType="String" resultType="com.epro.kq.interaction.approve.ApproveProcessInfo">
+        SELECT
+            process.*, approver1.empname approvername1, approver2.empname approvername2
+        FROM
+            approveprocess process LEFT JOIN
+            employee approver1 ON process.approverid1 = approver1.uuid
+            LEFT JOIN employee approver2 ON process.approverid2 = approver2.uuid
+        WHERE
+            process.applyid = #{applyId}
+    </select>
+</mapper>

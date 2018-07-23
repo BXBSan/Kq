@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.epro.kq.mappers.ApplyMapper">
+    <!--<cache readOnly="true"></cache>-->
+    <!--新增申请单-->
+    <insert id="add" parameterType="com.epro.kq.domain.Apply">
+        insert into applybill (uuid, empid, startdate, enddate,
+         starttime, endtime, reason, applytype, state, approverid, approvetime,
+          approveremark, createtime, updatetime) VALUES (
+        uuid(),
+        #{empId},
+        #{startDate},
+        #{endDate},
+        #{startTime},
+        #{endTime},
+        #{reason},
+        #{applyType},
+        #{state},
+        #{approverId},
+        null,
+        null,
+        now(),
+        now())
+    </insert>
+    <!--查询总页码-->
+    <select id="getPage" resultType="int" parameterType="map">
+        select
+          COUNT(*)
+        from
+          applybill
+        WHERE
+        ${state}
+        AND empid = #{empId}
+        <if test="startDate != null ">
+            and
+            startDate = #{startDate}
+        </if>
+        <if test=" applyType != 'all'">
+            and
+            applyType = #{applyType}
+        </if>
+
+    </select>
+    <!--分页查询申请单-->
+    <select id="getApplyList" parameterType="map" resultMap="applyBill">
+        SELECT
+          *
+        FROM
+          applybill
+        WHERE
+        ${state}
+        AND empid = #{empId}
+        <if test="startDate != null ">
+          and
+            startDate = #{startDate}
+        </if>
+        <if test=" applyType != 'all'">
+        and
+            applyType = #{applyType}
+        </if>
+          ${order}
+        limit ${start},10
+
+    </select>
+    <!--删除申请单-->
+    <delete id="delete" parameterType="string">
+        delete
+          from applybill
+        WHERE
+          uuid=#{id}
+    </delete>
+    <!--查询员工列表-->
+    <select id="getEmpList" resultMap="emp">
+        SELECT
+          *
+        FROM
+          employee
+    </select>
+    <resultMap id="emp" type="com.epro.kq.domain.Employee">
+        <id column="uuid" property="uuid"/>
+        <result column="empName" property="empName"/>
+    </resultMap>
+    <resultMap id="applyBill" type="com.epro.kq.domain.Apply">
+        <id column="uuid" property="uuid"/>
+        <result column="empid" property="empId"/>
+        <result column="startdate" property="startDate"/>
+        <result column="enddate" property="endDate"/>
+        <result column="starttime" property="startTime"/>
+        <result column="endtime" property="endTime"/>
+        <result column="reason" property="reason"/>
+        <result column="applytype" property="applyType"/>
+        <result column="state" property="state"/>
+        <result column="approveremark" property="approveRemark"/>
+        <result column="approverid" property="approverId"/>
+        <result column="approvetime" property="approveTime"/>
+    </resultMap>
+    <resultMap id="applyDetail" type="com.epro.kq.interaction.apply.ApplyDetail">
+        <result column="uuid" property="uuid" />
+        <result column="empNo" property="empNo" />
+        <result column="applyName" property="applyName"/>
+        <result column="applyType" property="applyType"/>
+        <result column="startDate" property="startDate"/>
+        <result column="endDate" property="endDate"/>
+        <result column="state" property="state"/>
+        <result column="empName" property="empName"/>
+        <result column="approveName" property="approveName"/>
+    </resultMap>
+    <select id="getApplyDetail" parameterType="map" resultMap="applyDetail">
+        select app.uuid,emp.empno,emp.empname applyName,app.applytype,app.startdate,app.enddate,app.state,apr.empname approveName FROM
+	      applybill app,employee emp,employee apr
+        WHERE app.empid = emp.uuid and app.approverid = apr.uuid and app.state = '1'AND app.empid = #{empId} AND app.applyType = #{type}
+        AND app.startdate like CONCAT(#{date},'%')
+        order by startdate
+    </select>
+</mapper>

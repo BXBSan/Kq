@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.epro.kq.mappers.ReportMapper">
+    <!--<cache readOnly="true"></cache>-->
+    <resultMap id="tolReportResultMap" type="com.epro.kq.domain.TolReport">
+        <result property="uuid" column="uuid" />
+        <result property="empName" column="empname"/>
+        <result property="empNo" column="empno"/>
+        <result property="clockNum" column="clocknum"/>
+        <result property="leaveNum" column="leavenum"/>
+        <result property="overTime" column="overtime"/>
+        <result property="offNum" column="offnum"/>
+    </resultMap>
+    <!--得到总报表-->
+    <select id="getTolReport" parameterType="map" resultMap="tolReportResultMap">
+      select employee.uuid uuid,employee.empno empno,employee.empname empname,dk.count1 clocknum,qj.count1 leavenum,
+            jb.count1 overtime,tx.count1 offnum  from
+            (select count(*) count1 from checkbill
+            where checkdate  like CONCAT(#{nowDate},'%')
+            and checkbill.empid=#{uuid}
+            ) dk,
+            (select count(*) count1 from applybill
+            where applytype='1' and createtime  like CONCAT(#{nowDate},'%')
+            and applybill.state='1'
+            and applybill.empid=#{uuid}
+            ) qj,
+            (select count(*) count1 from applybill
+            where applytype='2' and createtime  like CONCAT(#{nowDate},'%')
+            and applybill.state='1'
+            and applybill.empid=#{uuid}
+            ) jb,
+            (select count(*) count1 from applybill
+            where applytype='3' and createtime  like CONCAT(#{nowDate},'%')
+            and applybill.state='1'
+            and applybill.empid=#{uuid}
+            ) tx,
+            employee
+            where  employee.uuid=#{uuid}
+            <if test="depts != ''">
+                AND ${depts}
+            </if>
+    </select>
+
+
+    <resultMap id="countMap" type="com.epro.kq.interaction.report.CheckRoportRespose">
+        <result property="empNo" column="empNo" />
+        <result property="uuid"  column="uuid"/>
+        <result property="empName" column="empName" />
+        <result property="laterCount" column="laterCount" />
+        <result property="earlyCount" column="earlyCount" />
+        <result property="twoCounts"  column="twoCounts" />
+        <result property="nullCounts"  column="nullCounts" />
+    </resultMap>
+    <!--查询迟到情况-->
+    <select id="getLaterCounts" resultMap="countMap" parameterType="String">
+        SELECT latercount.empno empno,latercount.empname empname,count(latercount.checkdate) laterCount from
+        (SELECT employee.empno,employee.empname,later.*
+            FROM
+        employee,(SELECT
+            empid,
+            checkdate,
+            min(checktime) checktime
+        FROM
+            checkbill
+        WHERE
+            checkdate LIKE CONCAT(#{date},'%')
+        GROUP BY
+            empid,
+            checkdate
+        HAVING
+            checktime > '09:00:00')later
+        WHERE
+        employee.uuid=later.empid) latercount
+        GROUP BY latercount.empid
+    </select>
+    <!--查询早退情况-->
+    <select id="getEarlyCounts" resultMap="countMap" parameterType="String">
+        select earlycount.empno empno,earlycount.empname empname,count(*) earlyCount
+        FROM
+        (SELECT employee.empno,employee.empname,early.*
+        FROM
+        employee,(SELECT
+        empid,
+        checkdate,
+        max(checktime) checktime
+        FROM
+        checkbill
+        WHERE
+        checkdate LIKE  CONCAT(#{date},'%')
+        GROUP BY
+        empid,
+        checkdate
+        HAVING
+        '17:00:00' > checktime) early
+        WHERE
+        employee.uuid = early.empid) earlycount
+        GROUP BY earlycount.empname
+    </select>
+    <!--查询所有员工-->
+    <select id="getEmpCounts" parameterType="map" resultMap="countMap">
+        select employee.uuid uuid,employee.empno,employee.empname from employee
+        <where>
+            <if test="dept != ''">
+                ${dept}
+            </if>
+        </where>
+    </select>
+    <!--查询各用户打卡两次的天数-->
+    <select id="getPassCounts" parameterType="string" resultMap="countMap">
+        SELECT employee.empname,employee.empno,COUNT(*) twoCounts FROM employee,(SELECT empid,checkdate,MIN(checktime) small,MAX(checktime) big
+        FROM checkbill WHERE checkbill.checkdate LIKE CONCAT(#{date},'%')
+        GROUP BY checkdate,checkbill.empid
+        ORDER BY checkdate) leav
+        WHERE
+        leav.big>leav.small AND employee.uuid=leav.empid
+        GROUP BY leav.empid
+    </select>
+
+
+    <resultMap id="dept" type="com.epro.kq.interaction.dept.DeptTree">
+        <result property="deptName" column="deptname"/>
+        <result property="employeeId" column="employeeid"/>
+        <result property="deptNo" column="deptno"/>
+        <result column="roleId" property="roleId"/>
+        <result column="parentId" property="parentId"/>
+        <result property="uuid" column="uuid"/>
+    </resultMap>
+    <select id="getDeptTree" parameterType="String" resultMap="dept">
+        select * FROM dept where parentId=#{uuid};
+    </select>
+
+
+
+</mapper>

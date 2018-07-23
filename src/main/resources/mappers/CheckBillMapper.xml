@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.epro.kq.mappers.CheckBillMapper">
+    <!--<cache readOnly="true"></cache>-->
+<resultMap id="checkbill" type="com.epro.kq.domain.CheckBill">
+    <id property="uuid" column="uuid"/>
+    <result property="empId" column="empid"/>
+    <result property="checkTime" column="checktime"/>
+    <result property="checkDate" column="checkdate"/>
+    <result property="createTime" column="createtime"/>
+    <result property="updateTime" column="updatetime"/>
+</resultMap>
+
+    <!-- 查询用户列表 id和UserMapper接口的方法名相同 -->
+    <!--打卡插入语句-->
+    <insert id="insertCheckBill" parameterType="com.epro.kq.domain.CheckBill">
+      INSERT INTO checkbill
+      (uuid, empid, checktime, checkdate,createtime,updatetime) VALUES
+            (uuid(), #{empId}, #{checkTime}, #{checkDate}, #{createTime}, #{updateTime})
+    </insert>
+
+
+    <select id="getCount" parameterType="map" resultType="int">
+        SELECT count(*)
+          FROM
+        ${tableName}
+          WHERE
+            ${columnDate} like CONCAT(#{month},'%')
+        AND
+          empid = #{empId}
+        <if test="applyType != ''">
+          AND
+            applytype = #{applyType}
+          AND
+            state = '1'
+        </if>
+    </select>
+
+
+
+    <select id="getCheckBillCount" resultType="int" parameterType="map">
+            SELECT
+            COUNT(*)
+            FROM
+            checkbill
+            WHERE
+            empid=#{empId}
+            AND
+            checkDate=#{checkDate}
+
+    </select>
+
+    <update id="updateCheckBill" parameterType="map">
+        UPDATE
+	      checkbill
+        SET
+          checktime=#{checktime},updatetime=#{updatetime}
+        WHERE
+          empid = #{empId}
+        AND
+	      checktime = (
+                SELECT
+                    MAX(checktime)
+                FROM
+                    checkbillview
+                WHERE
+                  empid = #{empId}
+                AND
+                  checkDate = #{checkDate}
+	      )
+    </update>
+
+</mapper>

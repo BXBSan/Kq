@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.epro.kq.mappers.LoginMapper">
+    <!--<cache readOnly="true"></cache>-->
+    <resultMap id="userResultMap" type="com.epro.kq.domain.Employee">
+        <id property="uuid" column="uuid"/>
+        <result property="empName" column="empname"/>
+        <result property="empNo" column="empno"/>
+        <result property="roleId" column="roleid"/>
+        <result property="phoneNo" column="phoneno"/>
+        <result property="passWord" column="password"/>
+        <result property="sex" column="sex"/>
+        <result property="deptId" column="deptid"/>
+        <result property="createTime" column="createtime"/>
+        <result property="updateTime" column="updatetime"/>
+        <result property="hireDate" column="hiredate"/>
+    </resultMap>
+
+    <!-- 查询用户列表 id和UserMapper接口的方法名相同 -->
+    <select id="select" resultMap="userResultMap" parameterType="string">
+        SELECT
+        *
+        FROM
+        employee
+        where
+        phoneno = #{username}
+    </select>
+
+</mapper>

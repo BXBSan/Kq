@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.epro.kq.mappers.ReportFormMapper">
+
+    <resultMap id="applyListMap" type="com.epro.kq.interaction.approve.ReportFormsResponse">
+        <result property="empName" column="empname"/>
+        <result property="empId" column="empid"/>
+    </resultMap>
+
+    <select id="getEveryEmpApplyBillCount" parameterType="map" resultType="int">
+        SELECT count(*)
+        FROM
+        ${tableName}
+        WHERE
+        ${columnDate} like CONCAT(#{month},'%')
+        and
+        empid='${empId}'
+        <if test="applyType != ''">
+            AND
+            applytype = #{applyType}
+        </if>
+    </select>
+
+
+    <select id="getEveryApplyTypeBillCount" parameterType="map" resultType="int">
+        SELECT count(*)
+        FROM
+        ${tableName}
+        WHERE
+        ${columnDate} like CONCAT(#{month},'%')
+        <if test="applyType != ''">
+            AND
+            applytype = #{applyType}
+        </if>
+    </select>
+
+    <!-- 分页查询所有申请数据 -->
+    <select id="getApplyList" resultMap="applyListMap">
+        SELECT
+        distinct apply.empid empId,
+        emp.empname empName
+        FROM
+        employee emp,
+        applybill apply
+        WHERE
+        1=1
+        AND
+        apply.empid = emp.uuid
+        LIMIT ${limitStart2},${pageSize};
+    </select>
+
+
+    <!-- 获取总数目 -->
+    <select id="getApplyCount" resultType="int">
+        SELECT COUNT(DISTINCT apply.empid)
+        FROM applybill apply, employee emp
+        WHERE 1=1
+        AND
+        apply.empid = emp.uuid
+    </select>
+
+</mapper>

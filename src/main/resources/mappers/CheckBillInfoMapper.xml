@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.epro.kq.mappers.CheckBillInfoMapper">
+    <!--<cache readOnly="true"></cache>-->
+<resultMap id="checkbill" type="com.epro.kq.domain.CheckBill">
+    <id property="uuid" column="uuid"/>
+    <result property="empId" column="empid"/>
+    <result property="checkTime" column="checktime"/>
+    <result property="checkDate" column="checkdate"/>
+    <result property="createTime" column="createtime"/>
+    <result property="updateTime" column="updatetime"/>
+</resultMap>
+
+<resultMap id="checkbilldetail" type="com.epro.kq.interaction.report.CheckBillDetail"   >
+    <result property="empNo" column="empno"/>
+    <result property="empName" column="empname"/>
+    <result property="checkDate" column="checkdate"/>
+    <result property="checkTime" column="starttime"/>
+    <result property="endTime" column="endtime"/>
+</resultMap>
+
+    <select id="getCheckBill" parameterType="map" resultMap="checkbilldetail">
+
+        SELECT bill.empno,bill.empname,bill.checkdate,MIN(bill.checktime) starttime,MAX(bill.checktime) endtime
+	    FROM
+	    (SELECT
+        e.empno,e.empname,c.checkdate,c.checktime
+        FROM
+        checkbill c,employee e
+        WHERE
+        c.checkdate
+        LIKE CONCAT(#{nowDate},'%')
+        AND
+        c.empid=e.uuid
+        AND
+        c.empid=#{empId}
+
+        ORDER BY
+        c.checkdate DESC,c.checktime DESC) bill
+        GROUP BY
+        bill.empno,bill.checkdate
+        ORDER BY bill.checkdate DESC
+
+    </select>
+
+
+    <select id="getCheckBillInfo" resultMap="checkbill" parameterType="map">
+
+            SELECT
+            *
+            FROM
+            checkbill
+            WHERE
+            checkdate LIKE CONCAT(#{nowDate},'%')
+            AND
+            empid=#{empid}
+            ORDER
+            BY updatetime DESC
+
+
+    </select>
+
+
+    <resultMap id="applyBill" type="com.epro.kq.domain.Apply">
+        <id column="uuid" property="uuid"/>
+        <result column="empid" property="empId"/>
+        <result column="startdate" property="startDate"/>
+        <result column="enddate" property="endDate"/>
+        <result column="starttime" property="startTime"/>
+        <result column="endtime" property="endTime"/>
+        <result column="reason" property="reason"/>
+        <result column="applytype" property="applyType"/>
+        <result column="state" property="state"/>
+        <result column="approveremark" property="approveRemark"/>
+        <result column="approverid" property="approverId"/>
+        <result column="approvetime" property="approveTime"/>
+    </resultMap>
+
+    <select id="getApplyInfo" resultMap="applyBill" parameterType="map">
+      SELECT
+        *
+      FROM
+        applybill
+      WHERE
+        state = '1'
+      AND
+        applyType = #{applyType}
+      And startdate  like CONCAT(#{month},'%')
+      AND
+            empId = #{empId}
+    </select>
+
+
+</mapper>

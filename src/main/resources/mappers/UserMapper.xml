@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.epro.kq.mappers.UserMapper">
+    <!--<cache readOnly="true"></cache>-->
+    <resultMap id="userResultMap" type="com.epro.kq.domain.User">
+        <id property="id" column="id"/>
+        <result property="firstName" column="first_name"/>
+        <result property="lastName" column="last_name"/>
+        <result property="nickname" column="nickname"/>
+        <result property="password" column="password"/>
+    </resultMap>
+
+    <!-- 查询用户列表 id和UserMapper接口的方法名相同 -->
+    <select id="getUserAll" resultMap="userResultMap">
+        <![CDATA[
+            SELECT * from User
+        ]]>
+    </select>
+
+    <insert id="insertUser" parameterType="com.epro.kq.domain.User">
+       <![CDATA[
+            INSERT INTO USER
+            (nickname, password, first_name, last_name) VALUES
+            (#{nickname}, #{password}, #{firstName}, #{lastName})
+        ]]>
+    </insert>
+
+</mapper>

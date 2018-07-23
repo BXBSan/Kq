@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.epro.kq.mappers.EmpMapper">
+    <!--<cache readOnly="true"></cache>-->
+    <resultMap id="empResultMap" type="com.epro.kq.domain.Employee">
+        <result property="uuid" column="uuid"/>
+        <result property="createTime" column="createtime"/>
+        <result property="updateTime" column="updatetime"/>
+        <result property="empName" column="empname"/>
+        <result property="empNo" column="empno"/>
+        <result property="roleId" column="roleid"/>
+        <result property="phoneNo" column="phoneno"/>
+        <result property="passWord" column="password"/>
+        <result property="sex" column="sex"/>
+        <result property="deptId" column="deptid"/>
+        <result property="hireDate" column="hiredate"/>
+        <result property="salt" column="salt"/>
+        <result property="email" column="email"/>
+        <result property="image" column="image"/>
+    </resultMap>
+
+
+    <select id="findAll" parameterType="int" resultMap="empResultMap">
+            select * from employee ORDER BY employee.empno DESC limit #{0},#{1};
+    </select>
+
+    <select id="findEmpByDept" parameterType="map" resultMap="empResultMap">
+        select * from employee
+        <where>
+            <if test="depts != ''">
+                AND ${depts}
+            </if>
+            <if test="emps != ''">
+                AND ${emps}
+            </if>
+        </where>
+        ORDER BY employee.empno
+    </select>
+
+    <select id="findByEmpNo" parameterType="string"
+            resultType="com.epro.kq.domain.Employee">
+        select * from employee where empno=#{empNo}
+    </select>
+
+    <insert id="addEmp" parameterType="com.epro.kq.domain.Employee">
+      INSERT INTO employee
+            (uuid, empname, empno, roleid,phoneno,sex,deptid,hiredate,createtime,updatetime,password,salt,email,image) VALUES
+            (uuid(),#{empName}, #{empNo}, #{roleId},#{phoneNo}, #{sex}, #{deptId},#{hireDate}, #{createTime}, #{updateTime}, #{passWord},#{salt},#{email},#{image})
+    </insert>
+
+    <update id="updateEmp" parameterType="com.epro.kq.domain.Employee">
+        update employee
+        set empname=#{empName},empno=#{empNo},roleid=#{roleId},phoneno=#{phoneNo}, sex=#{sex}, deptid=#{deptId},hiredate=#{hireDate}, updatetime=now(),email=#{email},image=#{image}
+        where uuid=#{uuid}
+    </update>
+    <update id="updatePsd" parameterType="map">
+        UPDATE employee
+        SET password=#{encodenewpsd}
+        WHERE
+        uuid=#{uuid}
+    </update>
+
+    <delete id="deleteEmp" parameterType="string">
+        delete from employee where uuid=#{empId}
+    </delete>
+    <select id="getCount" resultType="int">
+         select COUNT(*) from employee
+    </select>
+
+    <!-- 根据empName,empNo,phoneNo查找员工信息 -->
+    <select id="findEmpByNoPhoneName" parameterType="Map" resultMap="empResultMap">
+        select * from employee WHERE empname=#{empName} AND empno = #{empNo} AND phoneno = #{phoneNo};
+    </select>
+
+    <select id="findEmpByRoleId" parameterType="String" resultMap="empResultMap">
+        SELECT * FROM  employee WHERE roleid = #{roleId}
+    </select>
+
+    <!--一个role被删除后,批量修改Emp的roleId为该role的为默认roleId-->
+    <update id="updateEmpToDefultRole" parameterType="Map">
+        UPDATE employee set roleid = #{defaultRoleId}, updatetime = now() WHERE roleid = #{deletedRoleId}
+    </update>
+
+    <select id="findEmpById" parameterType="String" resultType="com.epro.kq.interaction.emp.EmpInfo">
+        SELECT
+            emp.*, dept.deptname,role.rolename
+        FROM
+            employee emp, role, dept
+        WHERE emp.uuid = #{empId}
+        AND emp.roleid = role.uuid
+        AND emp.deptid = dept.uuid;
+    </select>
+
+    <update id="updateEmpToDefaultDept" parameterType="String">
+        UPDATE employee SET deptid = #{defaultDeptid}, updatetime = now() WHERE deptid = #{deletedDeptId}
+    </update>
+
+    <select id="countEmpByPhoneNo" parameterType="String" resultType="int">
+        SELECT COUNT(*) FROM employee WHERE phoneno = #{phoneNo}
+    </select>
+
+    <update id="updateEmpRole" parameterType="String">
+        UPDATE employee SET roleid = #{roleId}, updatetime = now() WHERE uuid = #{empId}
+    </update>
+
+    <select id="getDeptEmps" parameterType="String" resultMap="empResultMap">
+        SELECT * FROM employee WHERE deptid = #{deptId}
+    </select>
+
+    <select id="findDeptManager" parameterType="String" resultMap="empResultMap">
+        SELECT * FROM employee WHERE uuid = (
+                SELECT dept.employeeid
+                FROM dept WHERE uuid = (
+                        SELECT deptid FROM employee
+                        WHERE uuid = #{empId}))
+    </select>
+
+    <select id="findParentDeptManager" parameterType="String" resultMap="empResultMap">
+        SELECT * FROM employee WHERE uuid = (
+            SELECT employeeid FROM dept WHERE uuid = (
+                SELECT parentid FROM dept WHERE uuid = #{deptId}
+            )
+        )
+    </select>
+
+</mapper>

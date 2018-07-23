@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.epro.kq.mappers.DeptMapper">
+    <!--<cache readOnly="true"></cache>-->
+    <resultMap id="deptResultMap" type="com.epro.kq.domain.Dept">
+        <result property="deptName" column="deptname"/>
+        <result property="employeeId" column="employeeid"/>
+        <result property="deptNo" column="deptno"/>
+        <result property="uuid" column="uuid"/>
+        <result property="createTime" column="createtime"/>
+        <result property="updateTime" column="updatetime"/>
+    </resultMap>
+
+    <select id="findAll" parameterType="int" resultMap="deptResultMap">
+        select*from dept ORDER BY deptno DESC
+        <if test="showPage != 0 and pageSize != 0">
+        limit ${showPage},${pageSize};
+        </if>
+    </select>
+
+    <select id="findByNo" parameterType="string"
+            resultType="com.epro.kq.domain.Dept">
+        select * from dept where deptno=#{deptNo}
+    </select>
+
+    <insert id="addDept" parameterType="com.epro.kq.domain.Dept">
+      INSERT INTO dept
+            (uuid, deptname, deptno, parentid, roleid, employeeid, createtime, updatetime) VALUES
+            (uuid(),#{deptName}, #{deptNo}, #{parentId}, #{roleId}, #{employeeId},#{createTime}, #{updateTime})
+    </insert>
+
+    <update id="updateDept" parameterType="com.epro.kq.domain.Dept">
+        update dept
+        set deptname=#{deptName},deptno=#{deptNo},employeeid=#{employeeId}, updatetime=now()
+        where uuid=#{uuid}
+    </update>
+
+    <delete id="deleteDept" parameterType="string">
+        delete from dept where deptno=#{deptNo}
+    </delete>
+
+    <select id="getCount" resultType="int">
+        select COUNT(*) from dept
+    </select>
+
+    <select id="findDeptById" parameterType="String" resultMap="deptResultMap">
+        SELECT * FROM dept WHERE uuid = #{deptId}
+    </select>
+
+    <delete id="deleteDeptById" parameterType="string">
+        delete from dept where uuid=#{deptId}
+    </delete>
+
+    <select id="getDeptList" parameterType="int" resultType="com.epro.kq.interaction.dept.DeptInfo">
+        /*原来的
+        SELECT
+        dept.*, emp.empname
+        FROM
+        dept,
+        employee emp
+        WHERE
+        emp.uuid = dept.employeeid
+        ORDER BY
+        deptno ASC*/
+        SELECT deptinfo.*, IFNULL(num.empcount,0) empCount
+        FROM
+        (
+            SELECT
+            dept.*, emp.empname
+            FROM
+            dept,
+            employee emp
+            WHERE
+            emp.uuid = dept.employeeid
+            ORDER BY
+            deptno ASC ) deptinfo LEFT JOIN
+        (
+            SELECT
+            deptid,
+            COUNT(*) empcount
+            FROM
+            employee
+            GROUP BY
+            deptid
+        ) num ON deptinfo.uuid = num.deptid
+    <if test="showPage != 0 and pageSize != 0">
+        limit ${showPage},${pageSize};
+    </if>
+    </select>
+
+    <!--删除员工后,以该员工为部门管理员的部门,设置管理员为超级管理员-->
+    <update id="updateDeptManager" parameterType="String" >
+        UPDATE dept SET employeeid = #{defaultEmpId}, updatetime = now() WHERE employeeid = #{currentEmpId}
+    </update>
+
+    <select id="findParentDept" parameterType="String" resultMap="deptResultMap">
+        SELECT * FROM dept WHERE uuid = (
+          SELECT parentid FROM dept WHERE uuid = #{subDeptId}
+        )
+    </select>
+
+    <select id="findRoleId" parameterType="String" resultType="String">
+        SELECT roleid FROM dept WHERE uuid=#{deptId}
+    </select>
+
+    <select id="getRootDept" resultMap="deptResultMap">
+        SELECT * FROM dept WHERE parentid = '-1'
+    </select>
+</mapper>

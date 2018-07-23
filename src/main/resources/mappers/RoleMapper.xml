@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.epro.kq.mappers.RoleMapper">
+    <!--<cache readOnly="true"></cache>-->
+    <resultMap id="myMenuMap" type="com.epro.kq.interaction.role.MyRoleMenu">
+        <result property="menuId" column="menuid"/>
+        <result property="menuNo" column="menuno"/>
+        <result property="menuType" column="menuType"/>
+    </resultMap>
+
+    <resultMap id="myButtonMap" type="com.epro.kq.interaction.role.MyRoleButton">
+        <result property="buttonId" column="buttonid"/>
+        <result property="menuNo" column="menuno"/>
+        <result property="menuType" column="menutype"/>
+        <result property="buttonNo" column="buttonno"/>
+        <result property="buttonType" column="buttontype"/>
+        <result property="avaliable" column="avaliable" />
+    </resultMap>
+
+    <resultMap id="allButton" type="com.epro.kq.domain.Button">
+        <id column="uuid" property="uuid"/>
+        <result column="buttonType" property="buttonType"/>
+    </resultMap>
+
+    <resultMap id="roleResultMap" type="com.epro.kq.domain.Role">
+        <result property="uuid" column="uuid"/>
+        <result property="roleNo" column="roleno"/>
+        <result property="roleName" column="rolename"/>
+        <result property="createTime" column="createtime"/>
+        <result property="updateTime" column="updatetime"/>
+    </resultMap>
+
+    <resultMap id="allMenuButton" type="com.epro.kq.interaction.role.RoleMenuButton">
+        <result property="menuId" column="menuid"/>
+        <result property="menuNo" column="menuno"/>
+        <result property="menuType" column="menutype"/>
+        <result property="createTime" column="createtime"/>
+        <result property="updateTime" column="updatetime"/>
+        <collection property="buttonList" ofType="com.epro.kq.interaction.role.SubButton">
+            <result property="buttonId" column="buttonid"/>
+            <result property="buttonNo" column="buttonno"/>
+            <result property="buttonType" column="buttontype"/>
+            <result property="createTime" column="createtime1"/>
+            <result property="updateTime" column="updatetime1"/>
+        </collection>
+    </resultMap>
+
+    <!-- 通过roleid,查询权限菜单 -->
+    <select id="getMyMenu" resultMap="myMenuMap" parameterType="String">
+        SELECT
+            rm.menuid,
+            menu.menuno,
+            menu.menutype
+        FROM
+            role_menu rm,
+            menu
+        WHERE
+            rm.roleid = #{roleId}
+        AND menu.uuid = rm.menuid
+        ORDER BY menu.menuno;
+    </select>
+
+    <!-- 通过roleid,查询权限按钮 详细信息 -->
+    <select id="getMyButton" resultMap="myButtonMap" parameterType="String">
+        SELECT menu.menuno,menu.menutype,mybtn.buttontype,mybtn.buttonno,mybtn.avaliable,mybtn.buttonid
+        From menu,
+           (SELECT
+            btn.buttonno,
+            btn.buttontype,
+            btn.menuid,
+            rb.avaliable,
+            rb.buttonid
+            FROM
+            button btn,
+            role_button rb
+            WHERE
+            rb.roleid = #{roleId}
+            AND btn.uuid = rb.buttonid) mybtn
+        WHERE mybtn.menuid = menu.uuid;
+    </select>
+
+    <!-- 通过roleid,查询权限-->
+    <select id="getRoleById" resultType="com.epro.kq.domain.Role" parameterType="String">
+        SELECT *
+        From role
+        WHERE
+        uuid = #{roleId}
+    </select>
+
+    <!-- 2016.07.08 -->
+    <!-- 获取Role列表 -->
+    <select id="getRoleList" resultMap="roleResultMap" parameterType="Map">
+        SELECT role.uuid,role.roleno,role.rolename,role.createtime,role.updatetime
+        FROM role
+        <if test="keyWord != null">
+            WHERE role.rolename LIKE '%${keyWord}%'
+        </if>
+        ORDER BY role.createtime ASC
+    </select>
+
+    <!--删除一个role-->
+    <delete id="deleteRoleById" parameterType="String">
+        DELETE FROM role WHERE uuid = #{roleId};
+    </delete>
+
+    <!--新增role-->
+    <!-- 这个不能用 -->
+    <!--<insert id="addRole" parameterMap="roleResultMap">
+        INSERT INTO role (uuid, roleno, rolename, createtime, updatetime)
+        VALUES (uuid(), #{roleNo}, #{roleName}, now(), now());
+    </insert>-->
+    <insert id="addRole" parameterType="com.epro.kq.domain.Role">
+        INSERT INTO role (uuid, roleno, rolename, createtime, updatetime)
+        VALUES (#{uuid}, '', #{roleName}, now(), now());
+    </insert>
+
+    <!--新增权限菜单(一个一个插入role_menu)-->
+    <insert id="addRoleMenu" parameterType="map">
+        INSERT INTO role_menu(uuid, roleid, menuid, createtime, updatetime)
+        VALUES (uuid(), #{roleId}, #{menuId}, now(), now());
+    </insert>
+
+    <!--新增权限按钮(一个一个插入role_button)-->
+    <insert id="addRoleButton" parameterType="map">
+        INSERT INTO role_button(uuid, roleid, buttonid, createtime, updatetime, avaliable)
+        VALUES (uuid(), #{roleId}, #{buttonId}, now(), now(), 0);
+    </insert>
+
+    <insert id="addNewRoleButton" parameterType="map">
+        INSERT INTO role_button(uuid, roleid, buttonid, createtime, updatetime, avaliable)
+        VALUES (uuid(), #{roleId}, #{buttonId}, now(), now(), 1);
+    </insert>
+    <!--删除role后,删除role_menu表里所有roleid为指定值的数据(批量)-->
+    <delete id="deleteMenuByRoleId" parameterType="String">
+        DELETE FROM role_menu WHERE roleid = #{roleId}
+    </delete>
+
+    <!--删除role后,删除role_button表里所有roleid为指定值的数据(批量)-->
+    <delete id="deleteButtonByRoleId" parameterType="String">
+        DELETE FROM role_button WHERE roleid = #{roleId}
+    </delete>
+
+    <select id="getAllMenuButton" resultMap="allMenuButton">
+        SELECT
+            menu.uuid menuid,
+            menu.menuno,
+            menu.menutype,
+            menu.createtime,
+            menu.updatetime,
+            button.uuid buttonid,
+            button.buttonno,
+            button.buttontype,
+            button.createtime,
+            button.updatetime
+        FROM menu LEFT JOIN button
+        ON
+            menu.uuid = button.menuid
+        ORDER BY
+            menu.menuno,button.buttonno
+    </select>
+
+    <update id="updateRoleButton" parameterType="map">
+        UPDATE role_button
+        set avaliable = '1'
+        WHERE
+          roleid=#{roleId}
+        and
+          buttonid = #{buttonId}
+    </update>
+
+    <update id="updateAvaliable" parameterType="map">
+        UPDATE role_button
+        set avaliable = '0'
+        WHERE
+        roleid=#{roleId}
+        and
+        buttonid = #{buttonId}
+    </update>
+
+    <update id="editRole" parameterType="com.epro.kq.domain.Role">
+        UPDATE
+          role
+        SET
+          rolename=#{roleName}
+        WHERE
+          uuid=#{uuid}
+    </update>
+    <select id="getAllButton" resultMap="allButton">
+        select *
+        FROM button
+    </select>
+    <!--<select id="getMyMenuButtonById" resultMap="allMenuButton">
+        SELECT
+        menu.uuid menuid,
+        menu.menuno,
+        menu.menutype,
+        menu.createtime,
+        menu.updatetime,
+        button.uuid buttonid,
+        button.buttonno,
+        button.buttontype,
+        button.createtime,
+        button.updatetime
+        FROM menu LEFT JOIN button
+        ON
+        menu.uuid = button.menuid
+        ORDER BY
+        menu.menuno,button.buttonno
+    </select>-->
+
+    <!-- 获取默认权限,暂时写死 -->
+    <select id="getDefalulRole" resultMap="roleResultMap" parameterType="Map">
+        SELECT * FROM role WHERE rolename = #{defaultRoleName} AND roleno = ${defaultRoleNo};
+    </select>
+    <!--查询角色名是否重复-->
+    <select id="checkRoleName" resultType="int" parameterType="String">
+        select count(*) FROM role where roleName=#{roleName}
+    </select>
+</mapper>
